@@ -118,6 +118,6 @@ if __name__ == '__main__':
     utc_timestamp = datetime.datetime.utcnow()
     collections.insert_one({'id': 4, "date": utc_timestamp})
     # print(collections.find_one({'id': 4}))
-    collections.drop_indexes()
+    # print(drop_indexes())
     print(mongo_data_cleaning_counter(collections, 24 * 60 * 60))
     # print(drop_indexes())
