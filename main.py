@@ -1,31 +1,36 @@
 import re
+from typing import List
+
 import pymongo
 import datetime
 
 
-def check_correct(keys: list, text: str) -> str:
+def user_input_verification(keys: list, text: str) -> list[str] | str:
     """Верификация введенных пользователем данных"""
     user_input_keys = [word for word in re.split("[^a-zA-Z{_}]", text) if word.startswith('{') or word.endswith('}')]
+    errors_list = []
     for word in user_input_keys:
-        try:
-            assert word[0] == '{'
-        except AssertionError:
-            return 'Отсутствует открывающая скобка ключа'
-        try:
-            assert word[-1] == '}'
-        except AssertionError:
-            return 'Отсутствует закрывающая скобка ключа'
-        try:
-            assert word[1:-1] in keys
-        except AssertionError:
-            return f'Ключ {word} отсутствует в списке'
+        if word[0] != '{':
+            errors_list.append(f'{word}: Отсутствует открывающая скобка ключа')
+        if word[-1] != '}':
+            errors_list.append(f'{word}: Отсутствует закрывающая скобка ключа')
+        if word[1:-1] not in keys:
+            errors_list.append(f'Ключ {word} отсутствует в списке')
+            # Или AssertionError
+            # assert word[0] == '{'
+            # assert word[-1] == '}'
+            # assert word[1:-1] in keys
+    if errors_list:
+        return errors_list
     return 'Все проверки прошили успешно'
 
 
 def equal_lists(arr: list) -> list:
-    """Групирует повторяющиеся данные"""
+    """Группирует повторяющиеся данные"""
     interim_dict = {tuple(i): arr.count(i) for i in arr}.items()
     final_list = []
+    # здесь почему-то append не заработал в list comprehension
+    # final_list = [list(i[0]).append(i[1]) for i in interim_dict]
     for i in interim_dict:
         middle = list(i[0])
         middle.append(i[1])
@@ -33,7 +38,7 @@ def equal_lists(arr: list) -> list:
     return final_list
 
 
-def json_diff(initial_dict: dict, end_dict: dict, diff_list:list) -> dict:
+def json_diff(initial_dict: dict, end_dict: dict, diff_list: list) -> dict:
     """Ищет разницу между двумя json"""
     result_dict = dict()
     for i in diff_list:
@@ -42,14 +47,14 @@ def json_diff(initial_dict: dict, end_dict: dict, diff_list:list) -> dict:
     return result_dict
 
 
-def data_cleaning(collection: pymongo.collection, data_lifetime: int) -> str:
+def mongo_data_cleaning_counter(collection: pymongo.collection, data_lifetime: int) -> str:
     """Очищает данные из MongoDB по истечению заданного времени"""
     collection.create_index('date', expireAfterSeconds=data_lifetime)
     return f'Время жизни данных установлено на {data_lifetime} сек.'
 
 
 def drop_indexes() -> str:
-    """Сбрасывает индексы"""
+    """Сбрасывает все инндексы """
     collections.drop_indexes()
     return f'Все индексы базы данных сброшены'
 
@@ -67,11 +72,12 @@ if __name__ == '__main__':
     Услуги:
     {services}
     управление записью {record_link}'''
-    print(check_correct(list_keys, test_text))
+    print(user_input_verification(list_keys, test_text))
     print(f'______________')
 
     print(f'2')
-    a = [['665587', 2], ['669532', 1], ['669537', 2], ['669532', 1], ['665587', 1]] * 6
+    a = [['665587', 2], ['669532', 1], ['669537', 2], ['669532', 1], ['665587', 1], ['11', 22], ['11', 22],
+         ['11', 22]] * 6
     print(equal_lists(a))
     print(f'______________')
 
@@ -104,7 +110,7 @@ if __name__ == '__main__':
 
     print(f'4')
     """"""
-    #подключаемся к базе
+    # подключаемся к базе
     db_client = pymongo.MongoClient('localhost', 27017)
     current = db_client['test']
     collections = current['test']
@@ -113,5 +119,5 @@ if __name__ == '__main__':
     collections.insert_one({'id': 4, "date": utc_timestamp})
     # print(collections.find_one({'id': 4}))
     collections.drop_indexes()
-    print(data_cleaning(collections, 24*60*60))
+    print(mongo_data_cleaning_counter(collections, 24 * 60 * 60))
     # print(drop_indexes())
